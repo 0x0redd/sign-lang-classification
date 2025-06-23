@@ -1,0 +1,7 @@
+dropout: 0.3
+hidden_size: 256
+input_size: 84
+learning_rate: 0.001
+num_classes: 4
+num_layers: 2
+weight_decay: 0.0001
