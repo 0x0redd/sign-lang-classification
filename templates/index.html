@@ -1,0 +1,572 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sign Language Recognition</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            padding: 40px;
+            max-width: 800px;
+            width: 100%;
+            text-align: center;
+        }
+
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 2.5em;
+            font-weight: 700;
+        }
+
+        .subtitle {
+            color: #666;
+            margin-bottom: 40px;
+            font-size: 1.1em;
+        }
+
+        .upload-section {
+            margin-bottom: 40px;
+        }
+
+        .upload-area {
+            border: 3px dashed #ddd;
+            border-radius: 15px;
+            padding: 40px;
+            margin-bottom: 20px;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .upload-area:hover {
+            border-color: #667eea;
+            background-color: #f8f9ff;
+        }
+
+        .upload-area.dragover {
+            border-color: #667eea;
+            background-color: #f0f4ff;
+        }
+
+        .upload-icon {
+            font-size: 3em;
+            color: #667eea;
+            margin-bottom: 15px;
+        }
+
+        .upload-text {
+            font-size: 1.2em;
+            color: #666;
+            margin-bottom: 10px;
+        }
+
+        .upload-hint {
+            font-size: 0.9em;
+            color: #999;
+        }
+
+        .file-input {
+            display: none;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 25px;
+            font-size: 1.1em;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin: 10px;
+            text-decoration: none;
+            display: inline-block;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+        }
+
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .btn-secondary {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        }
+
+        .video-preview {
+            margin: 20px 0;
+            max-width: 100%;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+        }
+
+        .video-preview video {
+            width: 100%;
+            height: auto;
+        }
+
+        .result-section {
+            margin-top: 30px;
+            padding: 20px;
+            border-radius: 15px;
+            background: #f8f9ff;
+            display: none;
+        }
+
+        .result-title {
+            font-size: 1.5em;
+            color: #333;
+            margin-bottom: 15px;
+        }
+
+        .prediction {
+            font-size: 2em;
+            font-weight: bold;
+            color: #667eea;
+            margin-bottom: 10px;
+        }
+
+        .confidence {
+            font-size: 1.1em;
+            color: #666;
+            margin-bottom: 20px;
+        }
+
+        .probabilities {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        .probability-item {
+            background: white;
+            padding: 15px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .probability-label {
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 5px;
+        }
+
+        .probability-bar {
+            background: #eee;
+            height: 8px;
+            border-radius: 4px;
+            overflow: hidden;
+            margin-top: 5px;
+        }
+
+        .probability-fill {
+            height: 100%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            transition: width 0.3s ease;
+        }
+
+        .loading {
+            display: none;
+            margin: 20px 0;
+        }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 15px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .error {
+            background: #ffe6e6;
+            color: #d63031;
+            padding: 15px;
+            border-radius: 10px;
+            margin: 20px 0;
+            display: none;
+        }
+
+        .success {
+            background: #e6ffe6;
+            color: #00b894;
+            padding: 15px;
+            border-radius: 10px;
+            margin: 20px 0;
+            display: none;
+        }
+
+        .camera-section {
+            margin: 30px 0;
+            display: none;
+        }
+
+        #videoElement {
+            width: 100%;
+            max-width: 500px;
+            border-radius: 10px;
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+        }
+
+        .camera-controls {
+            margin-top: 20px;
+        }
+
+        .record-btn {
+            background: #e74c3c;
+        }
+
+        .record-btn.recording {
+            background: #c0392b;
+            animation: pulse 1s infinite;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 20px;
+                margin: 10px;
+            }
+
+            h1 {
+                font-size: 2em;
+            }
+
+            .upload-area {
+                padding: 20px;
+            }
+
+            .btn {
+                padding: 12px 24px;
+                font-size: 1em;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🤟 Sign Language Recognition</h1>
+        <p class="subtitle">Upload or record a video to recognize sign language gestures</p>
+
+        <div class="upload-section">
+            <div class="upload-area" id="uploadArea">
+                <div class="upload-icon">📁</div>
+                <div class="upload-text">Drop your video file here or click to browse</div>
+                <div class="upload-hint">Supports MP4, AVI, MOV files (max 16MB)</div>
+                <input type="file" id="fileInput" class="file-input" accept="video/*">
+            </div>
+            <button class="btn" onclick="document.getElementById('fileInput').click()">Choose File</button>
+            <button class="btn btn-secondary" onclick="toggleCamera()">📹 Record Video</button>
+        </div>
+
+        <div class="camera-section" id="cameraSection">
+            <video id="videoElement" autoplay muted></video>
+            <div class="camera-controls">
+                <button class="btn record-btn" id="recordBtn" onclick="toggleRecording()">🎥 Start Recording</button>
+                <button class="btn" onclick="stopCamera()">❌ Stop Camera</button>
+            </div>
+        </div>
+
+        <div class="video-preview" id="videoPreview" style="display: none;">
+            <video id="previewVideo" controls></video>
+        </div>
+
+        <div class="loading" id="loading">
+            <div class="spinner"></div>
+            <p>Processing video and analyzing sign language...</p>
+        </div>
+
+        <div class="error" id="error"></div>
+        <div class="success" id="success"></div>
+
+        <div class="result-section" id="resultSection">
+            <div class="result-title">Recognition Result</div>
+            <div class="prediction" id="prediction"></div>
+            <div class="confidence" id="confidence"></div>
+            <div class="probabilities" id="probabilities"></div>
+        </div>
+    </div>
+
+    <script>
+        let mediaRecorder;
+        let recordedChunks = [];
+        let stream = null;
+        let isRecording = false;
+
+        // File upload handling
+        const uploadArea = document.getElementById('uploadArea');
+        const fileInput = document.getElementById('fileInput');
+        const videoPreview = document.getElementById('videoPreview');
+        const previewVideo = document.getElementById('previewVideo');
+        const loading = document.getElementById('loading');
+        const error = document.getElementById('error');
+        const success = document.getElementById('success');
+        const resultSection = document.getElementById('resultSection');
+
+        // Drag and drop functionality
+        uploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadArea.classList.add('dragover');
+        });
+
+        uploadArea.addEventListener('dragleave', () => {
+            uploadArea.classList.remove('dragover');
+        });
+
+        uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadArea.classList.remove('dragover');
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                handleFile(files[0]);
+            }
+        });
+
+        uploadArea.addEventListener('click', () => {
+            fileInput.click();
+        });
+
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) {
+                handleFile(e.target.files[0]);
+            }
+        });
+
+        function handleFile(file) {
+            if (!file.type.startsWith('video/')) {
+                showError('Please select a valid video file.');
+                return;
+            }
+
+            if (file.size > 16 * 1024 * 1024) {
+                showError('File size must be less than 16MB.');
+                return;
+            }
+
+            // Show video preview
+            const url = URL.createObjectURL(file);
+            previewVideo.src = url;
+            videoPreview.style.display = 'block';
+            resultSection.style.display = 'none';
+            hideMessages();
+
+            // Upload and process
+            uploadVideo(file);
+        }
+
+        function uploadVideo(file) {
+            const formData = new FormData();
+            formData.append('video', file);
+
+            loading.style.display = 'block';
+            hideMessages();
+
+            fetch('/upload', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                loading.style.display = 'none';
+                if (data.error) {
+                    showError(data.error);
+                } else {
+                    showResult(data);
+                }
+            })
+            .catch(err => {
+                loading.style.display = 'none';
+                showError('An error occurred while processing the video.');
+                console.error(err);
+            });
+        }
+
+        // Camera functionality
+        function toggleCamera() {
+            const cameraSection = document.getElementById('cameraSection');
+            if (cameraSection.style.display === 'none' || cameraSection.style.display === '') {
+                startCamera();
+            } else {
+                stopCamera();
+            }
+        }
+
+        async function startCamera() {
+            try {
+                stream = await navigator.mediaDevices.getUserMedia({ 
+                    video: { 
+                        width: { ideal: 640 },
+                        height: { ideal: 480 }
+                    }, 
+                    audio: false 
+                });
+                
+                const videoElement = document.getElementById('videoElement');
+                videoElement.srcObject = stream;
+                
+                document.getElementById('cameraSection').style.display = 'block';
+                hideMessages();
+            } catch (err) {
+                showError('Could not access camera: ' + err.message);
+            }
+        }
+
+        function stopCamera() {
+            if (stream) {
+                stream.getTracks().forEach(track => track.stop());
+                stream = null;
+            }
+            
+            if (isRecording) {
+                stopRecording();
+            }
+            
+            document.getElementById('cameraSection').style.display = 'none';
+        }
+
+        function toggleRecording() {
+            if (isRecording) {
+                stopRecording();
+            } else {
+                startRecording();
+            }
+        }
+
+        function startRecording() {
+            if (!stream) return;
+
+            recordedChunks = [];
+            mediaRecorder = new MediaRecorder(stream, { mimeType: 'video/webm' });
+            
+            mediaRecorder.ondataavailable = (event) => {
+                if (event.data.size > 0) {
+                    recordedChunks.push(event.data);
+                }
+            };
+
+            mediaRecorder.onstop = () => {
+                const blob = new Blob(recordedChunks, { type: 'video/webm' });
+                const file = new File([blob], 'recorded_video.webm', { type: 'video/webm' });
+                handleFile(file);
+            };
+
+            mediaRecorder.start();
+            isRecording = true;
+            
+            const recordBtn = document.getElementById('recordBtn');
+            recordBtn.textContent = '⏹️ Stop Recording';
+            recordBtn.classList.add('recording');
+        }
+
+        function stopRecording() {
+            if (mediaRecorder && isRecording) {
+                mediaRecorder.stop();
+                isRecording = false;
+                
+                const recordBtn = document.getElementById('recordBtn');
+                recordBtn.textContent = '🎥 Start Recording';
+                recordBtn.classList.remove('recording');
+            }
+        }
+
+        function showResult(data) {
+            const prediction = document.getElementById('prediction');
+            const confidence = document.getElementById('confidence');
+            const probabilities = document.getElementById('probabilities');
+
+            prediction.textContent = data.predicted_class;
+            confidence.textContent = `Confidence: ${(data.confidence * 100).toFixed(1)}%`;
+
+            // Clear previous probabilities
+            probabilities.innerHTML = '';
+
+            // Add probability bars
+            Object.entries(data.all_probabilities).forEach(([className, prob]) => {
+                const item = document.createElement('div');
+                item.className = 'probability-item';
+                
+                const label = document.createElement('div');
+                label.className = 'probability-label';
+                label.textContent = className;
+                
+                const bar = document.createElement('div');
+                bar.className = 'probability-bar';
+                
+                const fill = document.createElement('div');
+                fill.className = 'probability-fill';
+                fill.style.width = `${prob * 100}%`;
+                
+                bar.appendChild(fill);
+                item.appendChild(label);
+                item.appendChild(bar);
+                probabilities.appendChild(item);
+            });
+
+            resultSection.style.display = 'block';
+            showSuccess('Video processed successfully!');
+        }
+
+        function showError(message) {
+            error.textContent = message;
+            error.style.display = 'block';
+            success.style.display = 'none';
+        }
+
+        function showSuccess(message) {
+            success.textContent = message;
+            success.style.display = 'block';
+            error.style.display = 'none';
+        }
+
+        function hideMessages() {
+            error.style.display = 'none';
+            success.style.display = 'none';
+        }
+
+        // Clean up on page unload
+        window.addEventListener('beforeunload', () => {
+            if (stream) {
+                stream.getTracks().forEach(track => track.stop());
+            }
+        });
+    </script>
+</body>
+</html> 
