@@ -1,4 +1,134 @@
+# Document: Video Action/Sign Recognition Pipeline using Keypoints and Sequence Models
 
+**Author:** (Derived from Notebook `model - yolo .ipynb`)
+**Date:** (Based on execution counts, likely recent)
+
+---
+
+**Table of Contents:**
+
+1.  [General Idea and Overview](#1-general-idea-and-overview)
+    *   [1.1. Problem Statement](#11-problem-statement)
+    *   [1.2. Pipeline Approach](#12-pipeline-approach)
+    *   [1.3. Key Technologies and Definitions](#13-key-technologies-and-definitions)
+2.  [Etape 1: Setup and Configuration](#2-etape-1-setup-and-configuration)
+    *   [2.1. Library Installation and Imports](#21-library-installation-and-imports)
+    *   [2.2. Global Configuration Parameters](#22-global-configuration-parameters)
+    *   [2.3. Reproducibility](#23-reproducibility)
+3.  [Etape 2: Dataset Preparation (Optional: Dummy Data)](#3-etape-2-dataset-preparation-optional-dummy-data)
+    *   [3.1. Expected Dataset Structure](#31-expected-dataset-structure)
+    *   [3.2. Dummy Video Dataset Creation](#32-dummy-video-dataset-creation)
+4.  [Etape 3: Preprocessing - Keypoint Extraction](#4-etape-3-preprocessing---keypoint-extraction)
+    *   [4.1. Initialization of Detectors (YOLO & MediaPipe)](#41-initialization-of-detectors-yolo--mediapipe)
+    *   [4.2. Helper Function: `extract_normalized_hand_kps`](#42-helper-function-extract_normalized_hand_kps)
+    *   [4.3. Core Helper Function: `process_frame_for_keypoints`](#43-core-helper-function-process_frame_for_keypoints)
+    *   [4.4. Main Preprocessing Loop: `preprocess_videos_to_hdf5`](#44-main-preprocessing-loop-preprocess_videos_to_hdf5)
+    *   [4.5. HDF5 Data Storage](#45-hdf5-data-storage)
+5.  [Etape 4: Data Loading and Preparation for Training](#5-etape-4-data-loading-and-preparation-for-training)
+    *   [5.1. `KeypointSequenceDataset` (PyTorch Dataset)](#51-keypointsequencedataset-pytorch-dataset)
+    *   [5.2. `KeypointDataModule` (PyTorch Lightning DataModule)](#52-keypointdatamodule-pytorch-lightning-datamodule)
+    *   [5.3. Data Splitting](#53-data-splitting)
+6.  [Etape 5: Sequence Model Definition](#6-etape-5-sequence-model-definition)
+    *   [6.1. `LSTMClassifier` (PyTorch Lightning Module)](#61-lstmclassifier-pytorch-lightning-module)
+    *   [6.2. Model Architecture (LSTM)](#62-model-architecture-lstm)
+    *   [6.3. Loss Function, Metrics, and Optimizer](#63-loss-function-metrics-and-optimizer)
+7.  [Etape 6: Model Training](#7-etape-6-model-training)
+    *   [7.1. Callbacks (Checkpointing, Early Stopping, LR Monitoring)](#71-callbacks-checkpointing-early-stopping-lr-monitoring)
+    *   [7.2. Logger (CSVLogger)](#72-logger-csvlogger)
+    *   [7.3. PyTorch Lightning Trainer Setup](#73-pytorch-lightning-trainer-setup)
+    *   [7.4. Training Execution](#74-training-execution)
+8.  [Etape 7: Evaluation](#8-etape-7-evaluation)
+    *   [8.1. Loading the Best Model](#81-loading-the-best-model)
+    *   [8.2. Plotting Training Curves](#82-plotting-training-curves)
+    *   [8.3. Test Set Evaluation](#83-test-set-evaluation)
+    *   [8.4. Classification Report and Confusion Matrix](#84-classification-report-and-confusion-matrix)
+9.  [Etape 8: Inference on a New Video](#9-etape-8-inference-on-a-new-video)
+    *   [9.1. Video Selection and Keypoint Extraction](#91-video-selection-and-keypoint-extraction)
+    *   [9.2. Prediction](#92-prediction)
+    *   [9.3. Visualization](#93-visualization)
+10. [Conclusion](#10-conclusion)
+
+---
+
+## 1. General Idea and Overview
+
+### 1.1. Problem Statement
+The goal is to recognize actions or sign language gestures from video input. This involves processing video frames, extracting relevant features, and then using a sequence model to classify the entire video sequence into predefined action/sign categories.
+
+### 1.2. Pipeline Approach
+The notebook implements a multi-stage pipeline:
+1.  **Preprocessing:** This is a crucial step where raw video data is transformed into a more manageable and feature-rich format.
+    *   **Frame-wise Processing:** Videos are broken down into individual frames.
+    *   **Region of Interest (ROI) Detection (Optional):** YOLOv8 is used to detect persons or hands within each frame. This helps focus the keypoint extraction on relevant areas, potentially improving accuracy and efficiency.
+    *   **Keypoint Extraction:** MediaPipe Hands is then applied (either to the ROIs or the full frame) to extract 2D keypoints (landmarks) for up to two hands.
+    *   **Normalization:** Keypoints are normalized to be independent of image size and position.
+    *   **Sequence Creation:** For each video, a fixed number of frames (`NUM_FRAMES_PER_VIDEO`) is selected (by padding or truncating), and their corresponding keypoint vectors are concatenated to form a sequence.
+2.  **Dataset Creation:** The extracted keypoint sequences and their corresponding labels are stored in an HDF5 file for efficient loading during training.
+3.  **Sequence Modeling:** An LSTM-based neural network is trained to learn patterns from these keypoint sequences and classify them. The notebook mentions that GRU or Transformer models could be substituted.
+4.  **Evaluation & Inference:** The trained model is evaluated on a test set, and its performance is demonstrated by making predictions on a sample video.
+
+### 1.3. Key Technologies and Definitions
+*   **YOLO (You Only Look Once):** A real-time object detection system. In this notebook, `yolov8n.pt` (a small, fast YOLOv8 model) is used for detecting regions of interest (hands or persons).
+*   **MediaPipe:** A framework by Google for building multimodal (e.g., video, audio) applied machine learning pipelines. `mp.solutions.hands` is specifically used here for robust hand tracking and 21 keypoint (landmark) extraction per hand.
+*   **Keypoints (Landmarks):** Specific points of interest on an object (e.g., finger joints, palm center). Each keypoint has coordinates (x, y, and sometimes z and visibility). Here, 2D (x, y) coordinates are used.
+*   **Normalization:** The process of scaling keypoint coordinates (usually between 0 and 1) relative to the frame dimensions. This makes the model invariant to video resolution and the absolute position of the hands in the frame.
+*   **Sequence:** An ordered set of data points. In this context, a sequence of keypoint vectors, where each vector represents the hand keypoints from one video frame.
+*   **HDF5 (Hierarchical Data Format 5):** A file format designed to store and organize large amounts of numerical data. It's suitable for storing the extracted keypoint sequences.
+*   **LSTM (Long Short-Term Memory):** A type of Recurrent Neural Network (RNN) architecture that is well-suited for learning from sequential data, as it can capture long-range dependencies.
+*   **PyTorch:** An open-source machine learning library.
+*   **PyTorch Lightning:** A lightweight PyTorch wrapper that organizes PyTorch code, making it easier to train and scale models, handle hardware, and implement best practices with less boilerplate.
+*   **Epoch:** One complete pass through the entire training dataset.
+*   **Batch Size:** The number of training examples utilized in one iteration (one forward/backward pass).
+*   **Learning Rate:** A hyperparameter that controls how much to change the model in response to the estimated error each time the model weights are updated.
+*   **Loss Function:** Measures how well the model's predictions match the true labels (e.g., `CrossEntropyLoss` for classification).
+*   **Optimizer:** An algorithm that adjusts the model's weights to minimize the loss function (e.g., `AdamW`).
+*   **Metrics:** Quantitative measures of model performance (e.g., accuracy, F1-score).
+
+## 2. Etape 1: Setup and Configuration
+
+### 2.1. Library Installation and Imports
+*   **Action:** The first code cell uses `%pip install` to ensure all necessary Python libraries are available.
+*   **Libraries Installed:** `ultralytics`, `mediapipe`, `opencv-python`, `numpy`, `torch`, `torchvision`, `torchaudio`, `tqdm`, `scikit-learn`, `matplotlib`, `h5py`, `lightning`, `pandas`, `ipywidgets`.
+*   **Imports:** Standard Python modules (`os`, `shutil`, etc.) and the installed libraries are imported for use throughout the notebook.
+*   **PyTorch Setting:** `torch.set_float32_matmul_precision('medium')` is set for potentially faster matrix multiplications on compatible hardware.
+
+### 2.2. Global Configuration Parameters
+*   **Action:** A dedicated code cell defines various global parameters that control the pipeline's behavior.
+*   **Path Definitions:**
+    *   `RAW_VIDEO_DATA_DIR`: Path to the directory containing raw video files, organized into subdirectories by class.
+    *   `PROCESSED_DATA_DIR`: Directory to save the processed HDF5 file.
+    *   `H5_FILENAME`: Name of the HDF5 file (e.g., "model.h5").
+    *   `MODEL_SAVE_DIR`: Directory to save trained model checkpoints.
+*   **Preprocessing Parameters:**
+    *   `YOLO_MODEL_NAME`: Specifies the YOLO model to use (e.g., 'yolov8n.pt').
+    *   `YOLO_CONF_THRESHOLD`: Minimum confidence for YOLO detections.
+    *   `HAND_DETECTION_TARGET_CLASSES`: COCO class index for "person" (used as ROI for MediaPipe if a dedicated hand detector isn't used).
+    *   `MAX_NUM_HANDS_MEDIAPIPE`, `MIN_DETECTION_CONF_MEDIAPIPE`, `MIN_TRACKING_CONF_MEDIAPIPE`: MediaPipe Hands configuration.
+    *   `NUM_FRAMES_PER_VIDEO`: Fixed number of frames per video sequence (padding/truncation applied).
+    *   `NUM_KEYPOINTS_PER_HAND`: 21 for MediaPipe hands.
+    *   `NUM_COORDS_PER_KEYPOINT`: 2 (for x, y).
+    *   `INPUT_SIZE`: Calculated as `MAX_NUM_HANDS_MEDIAPIPE * NUM_KEYPOINTS_PER_HAND * NUM_COORDS_PER_KEYPOINT` (e.g., 2 * 21 * 2 = 84 features per frame).
+*   **Model & Training Parameters:**
+    *   `SEQUENCE_MODEL_TYPE`: Set to "LSTM".
+    *   LSTM Hyperparameters: `HIDDEN_SIZE_LSTM`, `NUM_LAYERS_LSTM`, `DROPOUT_LSTM`.
+    *   Common Training Parameters: `BATCH_SIZE`, `LEARNING_RATE`, `WEIGHT_DECAY`, `EPOCHS`, `PATIENCE_EARLY_STOPPING`.
+*   **Directory Creation:** The specified directories are created if they don't already exist.
+
+### 2.3. Reproducibility
+*   **Action:** `RANDOM_SEED` is set, and this seed is applied to `random`, `numpy`, `torch`, and `pytorch_lightning.seed_everything()` to ensure that experiments can be reproduced with the same results.
+*   `os.environ["CUBLAS_WORKSPACE_CONFIG"] = ":4096:8"` is set for deterministic operations on CUDA (GPU) if available.
+
+## 3. Etape 2: Dataset Preparation (Optional: Dummy Data)
+
+### 3.1. Expected Dataset Structure
+The notebook expects videos to be organized in `RAW_VIDEO_DATA_DIR` as follows:
+RAW_VIDEO_DATA_DIR /
+├── class1_name /
+│ ├── video1.mp4
+│ ├── video2.avi
+├── class2_name /
+│ ├── video3.mp4
+└── ...
 ### 3.2. Dummy Video Dataset Creation
 *   **Purpose:** If `RAW_VIDEO_DATA_DIR` is empty, this section creates a small, synthetic dataset for demonstration purposes.
 *   **Action:** The `create_dummy_video` function generates simple MP4 videos containing moving text.
