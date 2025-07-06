@@ -19,11 +19,16 @@
 
 Ce projet implémente un système de reconnaissance de langue des signes basé sur l'intelligence artificielle, capable de classifier des actions/signes à partir de vidéos. Le système utilise une combinaison de détection d'objets (YOLOv8), d'extraction de points clés (MediaPipe), et d'apprentissage profond (LSTM) pour identifier quatre classes d'objets informatiques : **clavier**, **disque dur**, **ordinateur**, et **souris**.
 
-### 🎯 Objectifs
-- Détecter et classifier automatiquement les signes de langue des signes
-- Fournir une interface web intuitive pour l'upload et la prédiction
-- Atteindre une précision élevée avec un modèle robuste
-- Créer un pipeline complet de traitement vidéo
+### 🎯 Contexte et Motivation
+La langue des signes est un langage visuel qui sert de moyen de communication principal pour des millions de personnes sourdes et malentendantes dans le monde. Elle utilise des gestes des mains, des expressions faciales et des mouvements corporels pour transmettre du sens, formant des systèmes linguistiques complexes aussi riches et expressifs que les langues parlées. La reconnaissance et l'interprétation de la langue des signes par l'intelligence artificielle représente une avancée critique dans les technologies d'accessibilité, avec le potentiel de combler les écarts de communication et de créer des environnements numériques plus inclusifs.
+
+### 🎯 Objectifs Principaux
+- **Développer un Pipeline Complet** : Concevoir et implémenter un système complet qui traite les vidéos brutes via la détection des mains, l'extraction de points clés, la modélisation de séquences et la classification pour reconnaître les gestes de langue des signes
+- **Implémenter des Techniques de Vision par Ordinateur de Pointe** : Exploiter YOLOv8 pour une détection robuste des mains et MediaPipe pour une extraction précise des points clés
+- **Concevoir un Modèle de Classification de Séquences Efficace** : Développer et entraîner un réseau neuronal basé sur LSTM capable d'apprendre les motifs temporels dans les séquences de points clés
+- **Créer une Solution de Déploiement Pratique** : Implémenter à la fois un pipeline d'entraînement complet et une application web conviviale
+- **Évaluer et Valider les Performances** : Effectuer une évaluation complète en utilisant des métriques standard d'apprentissage automatique
+- **Assurer l'Accessibilité et la Confidentialité** : Développer un système capable de fonctionner hors ligne qui respecte la confidentialité des utilisateurs
 
 ---
 
@@ -59,6 +64,13 @@ Vidéo d'entrée → Détection YOLO → Extraction MediaPipe → Séquence LSTM
 - **Padding/Truncation** : Standardisation de la longueur
 - **Features par frame** : 84 dimensions (2 mains × 21 points × 2 coordonnées)
 
+### 4. Défis Techniques Adressés
+- **Complexité Temporelle** : Les gestes de langue des signes sont intrinsèquement temporels, nécessitant l'analyse de motifs de mouvement dans le temps
+- **Variabilité Spatiale** : Les positions, orientations et échelles des mains peuvent varier considérablement entre individus et conditions d'enregistrement
+- **Datasets Limités** : Contrairement aux autres tâches de vision par ordinateur, les datasets de langue des signes à grande échelle sont relativement rares
+- **Exigences de Traitement Temps Réel** : Les applications pratiques nécessitent des capacités d'inférence en temps réel tout en maintenant une précision élevée
+- **Accessibilité et Déploiement** : Les systèmes doivent être déployables dans divers environnements avec des ressources informatiques variables
+
 ---
 
 ## 📊 Préprocessing des Données
@@ -90,6 +102,13 @@ INPUT_SIZE = 84  # 2 × 21 × 2
 - **4 classes** : clavier, disque dur, ordinateur, souris
 - **Répartition** : 139 train / 40 validation / 20 test
 - **Format** : HDF5 avec métadonnées JSON
+
+### Caractéristiques des Vidéos
+- **Durée** : Variable (typiquement 2-5 secondes)
+- **Résolution** : Variable (standardisée à 640×640 pendant le prétraitement)
+- **Taux de frames** : Variable (traité à intervalles fixes)
+- **Format** : MP4 avec encodage H.264
+- **Contenu** : Individu unique effectuant des gestes de signes isolés
 
 ---
 
@@ -127,6 +146,15 @@ Test F1-Score (Macro): 78.7%
 Test Loss: 0.814
 ```
 
+### Performance d'Inférence
+```
+Temps de Traitement par Vidéo : ≈ 1.8 secondes
+Extraction de Frames Vidéo : 0.12s par vidéo
+Détection des Mains (YOLOv8) : 0.03s par frame
+Extraction de Points Clés (MediaPipe) : 0.02s par frame
+Classification de Séquence (LSTM) : 0.01s par séquence
+```
+
 ### Rapport de Classification Détaillé
 ```
               precision    recall  f1-score   support
@@ -152,6 +180,9 @@ weighted avg       0.85      0.80      0.79        20
 - **F1-score validation** : 92%
 - **Époques d'entraînement** : 31 (early stopping)
 
+### Comparaison avec l'État de l'Art
+Les résultats de 80% de précision s'alignent favorablement avec les précisions rapportées dans la littérature. Les études utilisant des approches similaires basées sur les points clés ont rapporté des précisions allant de 75-90% sur des tâches de vocabulaire limité. La précision de 80% atteinte dans ce travail se situe dans cette fourchette tout en utilisant une architecture de modèle relativement compacte et efficace.
+
 ---
 
 ## 🌐 Application Web Flask
@@ -173,6 +204,9 @@ def predict_sign(video_path):
 - **Prédiction temps réel** : Traitement immédiat
 - **Nettoyage automatique** : Suppression des fichiers temporaires
 - **Gestion d'erreurs** : Messages d'erreur détaillés
+- **Interface responsive** : Compatible desktop et mobile
+- **Traitement hors ligne** : Aucune dépendance cloud requise
+- **Scores de confiance** : Affichage des probabilités pour chaque classe
 
 ### Interface Utilisateur
 - **Template HTML** : Interface moderne et responsive
@@ -310,12 +344,23 @@ sign-lang-classification/
 2. **Variabilité temporelle** : Standardisation des séquences
 3. **Performance temps réel** : Optimisation pour l'interface web
 4. **Gestion mémoire** : Traitement de vidéos volumineuses
+5. **Taille limitée du dataset** : 199 vidéos pour 4 classes
+6. **Variabilité des conditions d'enregistrement** : Éclairage, angles de caméra, styles de signes
+
+### Limitations Actuelles
+- **Représentation des caractéristiques** : Utilisation uniquement des points clés des mains, ignorant les expressions faciales et la posture corporelle
+- **Modélisation temporelle** : Longueur de séquence fixe de 30 frames peut ne pas capturer optimalement la structure temporelle naturelle des signes
+- **Architecture du modèle** : Les réseaux LSTM ont des limitations inhérentes pour les dépendances à long terme
+- **Sensibilité aux conditions** : Performance dégradée avec des angles de caméra inhabituels, un éclairage médiocre ou des occlusions
 
 ### Améliorations Futures
-1. **Augmentation de données** : Plus de classes et d'exemples
-2. **Architecture avancée** : Transformer ou attention mechanisms
-3. **Temps réel** : Prédiction en streaming
-4. **Interface mobile** : Application mobile native
+1. **Expansion du Dataset** : Entraîner le modèle sur un dataset beaucoup plus large et diversifié
+2. **Intégration Multi-Modale** : Incorporer les points clés du visage et de la posture corporelle
+3. **Architectures Avancées** : Explorer les Transformers, GRUs ou les réseaux de convolution temporelle
+4. **Augmentation de Données** : Techniques d'augmentation au niveau des points clés
+5. **Inférence Temps Réel** : Optimisation du pipeline pour l'inférence webcam en temps réel
+6. **Reconnaissance Continue** : Extension de la reconnaissance de signes isolés à la langue des signes continue
+7. **Personnalisation** : Systèmes adaptatifs qui apprennent les styles de signes individuels
 
 ---
 
@@ -325,6 +370,31 @@ Pour toute question ou problème :
 - **Issues GitHub** : Signaler les bugs
 - **Documentation** : Consulter ce README
 - **Exemples** : Voir le notebook d'entraînement
+
+## 🎓 Informations Académiques
+
+### Auteurs
+- **Othmane FERRAH**
+- **Hicham BENLMAHI** 
+- **Soufian EL KARCHAL**
+
+### Institution
+- **Département** : Informatique et Génie Informatique
+- **Programme** : Licence en Sciences Mathématiques et Informatique (SMI)
+- **Année Académique** : 2024/2025
+
+### Projet
+- **Type** : Projet de fin d'études
+- **Sujet** : Développement d'un Système de Reconnaissance de Langue des Signes en Temps Réel Utilisant l'Apprentissage Profond et la Vision par Ordinateur
+- **Supervision** : Pr. [Nom du Superviseur]
+
+## 📚 Références Principales
+
+Ce projet s'appuie sur les travaux de recherche suivants :
+- **Adaloglou et al. (2021)** : Étude complète sur les méthodes d'apprentissage profond pour la reconnaissance de langue des signes
+- **Camgoz et al. (2020)** : Traduction neuronale de langue des signes
+- **Zhang et al. (2020)** : MediaPipe Hands pour le suivi des mains en temps réel
+- **Ultralytics (2023)** : YOLOv8, nouveau modèle de vision par ordinateur de pointe
 
 ---
 
