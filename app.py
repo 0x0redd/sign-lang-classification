@@ -141,8 +141,8 @@ class LSTMClassifier(L.LightningModule):
             },
         }
 
-def load_model_and_data():
-    """Load the trained model and data module"""
+def load_model_and_data(selected_model=None):
+    """Load the trained model and data module. If selected_model is provided, load that model."""
     global trained_model, data_module, yolo_detector, mp_hands, mp_drawing
     
     print("🔄 Starting model and data loading...")
@@ -176,32 +176,39 @@ def load_model_and_data():
     
     # Load the best model
     print("🔍 Looking for model files...")
-    model_path = Path("./model_yolo/best-action-model-epoch=31-val_f1=0.92.ckpt")
-    if not model_path.exists():
-        print(f"⚠️  Model not found at {model_path}")
-        # Try alternative model
-        model_path = Path("./model_yolo/best-action-model-epoch=13-val_f1=0.88-v3.ckpt")
+    if selected_model:
+        model_path = Path(f"./model_yolo/{selected_model}")
         if not model_path.exists():
-            print(f"⚠️  Alternative model not found at {model_path}")
-            # Try other alternatives
-            alternative_models = [
-                "model_yolo/best-action-model-epoch=13-val_f1=0.88-v2.ckpt",
-                "model_yolo/best-action-model-epoch=13-val_f1=0.88-v1.ckpt",
-                "model_yolo/best-action-model-epoch=13-val_f1=0.88.ckpt"
-            ]
-            for alt_model in alternative_models:
-                alt_path = Path(alt_model)
-                if alt_path.exists():
-                    model_path = alt_path
-                    print(f"✅ Found alternative model: {model_path}")
-                    break
-            else:
-                print("❌ No trained model found!")
-                return False
-        else:
-            print(f"✅ Found alternative model: {model_path}")
+            print(f"❌ Selected model not found at {model_path}")
+            return False
+        print(f"✅ Using user-selected model: {model_path}")
     else:
-        print(f"✅ Found primary model: {model_path}")
+        model_path = Path("./model_yolo/best-action-model-epoch=31-val_f1=0.92.ckpt")
+        if not model_path.exists():
+            print(f"⚠️  Model not found at {model_path}")
+            # Try alternative model
+            model_path = Path("./model_yolo/best-action-model-epoch=13-val_f1=0.88-v3.ckpt")
+            if not model_path.exists():
+                print(f"⚠️  Alternative model not found at {model_path}")
+                # Try other alternatives
+                alternative_models = [
+                    "model_yolo/best-action-model-epoch=13-val_f1=0.88-v2.ckpt",
+                    "model_yolo/best-action-model-epoch=13-val_f1=0.88-v1.ckpt",
+                    "model_yolo/best-action-model-epoch=13-val_f1=0.88.ckpt"
+                ]
+                for alt_model in alternative_models:
+                    alt_path = Path(alt_model)
+                    if alt_path.exists():
+                        model_path = alt_path
+                        print(f"✅ Found alternative model: {model_path}")
+                        break
+                else:
+                    print("❌ No trained model found!")
+                    return False
+            else:
+                print(f"✅ Found alternative model: {model_path}")
+        else:
+            print(f"✅ Found primary model: {model_path}")
     
     if model_path.exists():
         try:
@@ -384,7 +391,7 @@ def process_video_for_inference(video_path):
     print(f"Final sequence shape: {processed_sequence.shape}")
     return processed_sequence, processed_frames
 
-def predict_sign(video_path):
+def predict_sign(video_path, selected_model=None):
     """Predict the sign from a video file - matching notebook code"""
     print(f"🔍 Checking model status...")
     print(f"   - trained_model: {trained_model is not None}")
@@ -392,7 +399,10 @@ def predict_sign(video_path):
     print(f"   - yolo_detector: {yolo_detector is not None}")
     print(f"   - mp_hands: {mp_hands is not None}")
     
-    if trained_model is None:
+    if selected_model:
+        if not load_model_and_data(selected_model):
+            return None, f"Could not load selected model: {selected_model}"
+    elif trained_model is None:
         return None, "Model not loaded"
     
     try:
@@ -448,7 +458,7 @@ def index():
 
 @app.route('/upload', methods=['POST'])
 def upload_video():
-    """Handle video upload with better error handling"""
+    """Handle video upload with better error handling and model selection"""
     try:
         print("Upload request received")
         
@@ -477,6 +487,10 @@ def upload_video():
         
         file.seek(0)  # Reset file pointer
         
+        # Get selected model from form data
+        selected_model = request.form.get('model_name')
+        print(f"Selected model: {selected_model}")
+        
         if file:
             filename = secure_filename(file.filename)
             filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
@@ -486,7 +500,7 @@ def upload_video():
             
             # Predict the sign
             print("Starting prediction...")
-            result, error = predict_sign(filepath)
+            result, error = predict_sign(filepath, selected_model)
             
             # Clean up uploaded file
             try:
@@ -512,6 +526,16 @@ def record_video():
     # This would handle recorded video data
     # For now, we'll return a placeholder
     return jsonify({'error': 'Recording functionality not implemented yet'}), 501
+
+@app.route('/list_models', methods=['GET'])
+def list_models():
+    """Return a list of available model checkpoint files in model_yolo/"""
+    try:
+        model_dir = Path('model_yolo')
+        model_files = [f.name for f in model_dir.glob('best-action-model-epoch=*.ckpt') if f.is_file()]
+        return jsonify({'models': model_files})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 if __name__ == '__main__':
     print("Loading model and data...")
