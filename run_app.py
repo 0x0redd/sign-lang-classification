@@ -82,8 +82,15 @@ def main():
     
     # Import and run the Flask app
     try:
-        from app import app
-        app.run(debug=True, host='0.0.0.0', port=5000)
+        from app import app, load_model_and_data
+        print("\n🔄 Loading model and data...")
+        if load_model_and_data():
+            print("✅ Model and data loaded successfully!")
+            print("\n🚀 Starting Flask application...")
+            app.run(debug=True, host='0.0.0.0', port=5000)
+        else:
+            print("❌ Failed to load model and data. Please check the model files.")
+            sys.exit(1)
     except ImportError as e:
         print(f"❌ Error importing app: {e}")
         print("Please ensure all dependencies are installed:")

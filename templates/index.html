@@ -3,327 +3,283 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sign Language Recognition</title>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 20px;
-        }
-
-        .container {
-            background: white;
-            border-radius: 20px;
-            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
-            padding: 40px;
-            max-width: 800px;
-            width: 100%;
-            text-align: center;
-        }
-
-        h1 {
-            color: #333;
-            margin-bottom: 10px;
-            font-size: 2.5em;
-            font-weight: 700;
-        }
-
-        .subtitle {
-            color: #666;
-            margin-bottom: 40px;
-            font-size: 1.1em;
-        }
-
-        .upload-section {
-            margin-bottom: 40px;
-        }
-
-        .upload-area {
-            border: 3px dashed #ddd;
-            border-radius: 15px;
-            padding: 40px;
-            margin-bottom: 20px;
-            transition: all 0.3s ease;
-            cursor: pointer;
-        }
-
-        .upload-area:hover {
-            border-color: #667eea;
-            background-color: #f8f9ff;
-        }
-
-        .upload-area.dragover {
-            border-color: #667eea;
-            background-color: #f0f4ff;
-        }
-
-        .upload-icon {
-            font-size: 3em;
-            color: #667eea;
-            margin-bottom: 15px;
-        }
-
-        .upload-text {
-            font-size: 1.2em;
-            color: #666;
-            margin-bottom: 10px;
-        }
-
-        .upload-hint {
-            font-size: 0.9em;
-            color: #999;
-        }
-
-        .file-input {
-            display: none;
-        }
-
-        .btn {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            border: none;
-            padding: 15px 30px;
-            border-radius: 25px;
-            font-size: 1.1em;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            margin: 10px;
-            text-decoration: none;
-            display: inline-block;
-        }
-
-        .btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
-        }
-
-        .btn:disabled {
-            opacity: 0.6;
-            cursor: not-allowed;
-            transform: none;
-        }
-
-        .btn-secondary {
-            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
-        }
-
-        .video-preview {
-            margin: 20px 0;
-            max-width: 100%;
-            border-radius: 10px;
-            overflow: hidden;
-            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
-        }
-
-        .video-preview video {
-            width: 100%;
-            height: auto;
-        }
-
-        .result-section {
-            margin-top: 30px;
-            padding: 20px;
-            border-radius: 15px;
-            background: #f8f9ff;
-            display: none;
-        }
-
-        .result-title {
-            font-size: 1.5em;
-            color: #333;
-            margin-bottom: 15px;
-        }
-
-        .prediction {
-            font-size: 2em;
-            font-weight: bold;
-            color: #667eea;
-            margin-bottom: 10px;
-        }
-
-        .confidence {
-            font-size: 1.1em;
-            color: #666;
-            margin-bottom: 20px;
-        }
-
-        .probabilities {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 10px;
-            margin-top: 20px;
-        }
-
-        .probability-item {
-            background: white;
-            padding: 15px;
-            border-radius: 10px;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-        }
-
-        .probability-label {
-            font-weight: bold;
-            color: #333;
-            margin-bottom: 5px;
-        }
-
-        .probability-bar {
-            background: #eee;
-            height: 8px;
-            border-radius: 4px;
-            overflow: hidden;
-            margin-top: 5px;
-        }
-
-        .probability-fill {
-            height: 100%;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            transition: width 0.3s ease;
-        }
-
-        .loading {
-            display: none;
-            margin: 20px 0;
-        }
-
-        .spinner {
-            border: 4px solid #f3f3f3;
-            border-top: 4px solid #667eea;
-            border-radius: 50%;
-            width: 40px;
-            height: 40px;
-            animation: spin 1s linear infinite;
-            margin: 0 auto 15px;
-        }
-
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-
-        .error {
-            background: #ffe6e6;
-            color: #d63031;
-            padding: 15px;
-            border-radius: 10px;
-            margin: 20px 0;
-            display: none;
-        }
-
-        .success {
-            background: #e6ffe6;
-            color: #00b894;
-            padding: 15px;
-            border-radius: 10px;
-            margin: 20px 0;
-            display: none;
-        }
-
-        .camera-section {
-            margin: 30px 0;
-            display: none;
-        }
-
-        #videoElement {
-            width: 100%;
-            max-width: 500px;
-            border-radius: 10px;
-            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
-        }
-
-        .camera-controls {
-            margin-top: 20px;
-        }
-
-        .record-btn {
-            background: #e74c3c;
-        }
-
-        .record-btn.recording {
-            background: #c0392b;
-            animation: pulse 1s infinite;
-        }
-
-        @keyframes pulse {
-            0% { transform: scale(1); }
-            50% { transform: scale(1.05); }
-            100% { transform: scale(1); }
-        }
-
-        @media (max-width: 768px) {
-            .container {
-                padding: 20px;
-                margin: 10px;
-            }
-
-            h1 {
-                font-size: 2em;
-            }
-
-            .upload-area {
-                padding: 20px;
-            }
-
-            .btn {
-                padding: 12px 24px;
-                font-size: 1em;
+    <title>Reconnaissance de Langue des Signes - Détection par IA</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'primary': '#004aad',
+                        'secondary': '#f0951f',
+                        'accent': '#10b981',
+                    },
+                    animation: {
+                        'spin': 'spin 1s linear infinite',
+                        'pulse': 'pulse 1s infinite',
+                        'fade-in': 'fadeIn 0.5s ease-in-out',
+                        'slide-up': 'slideUp 0.5s ease-out',
+                    },
+                    keyframes: {
+                        fadeIn: {
+                            '0%': { opacity: '0' },
+                            '100%': { opacity: '1' },
+                        },
+                        slideUp: {
+                            '0%': { transform: 'translateY(20px)', opacity: '0' },
+                            '100%': { transform: 'translateY(0)', opacity: '1' },
+                        }
+                    }
+                }
             }
         }
-    </style>
+    </script>
 </head>
-<body>
-    <div class="container">
-        <h1>🤟 Sign Language Recognition</h1>
-        <p class="subtitle">Upload or record a video to recognize sign language gestures</p>
-
-        <div class="upload-section">
-            <div class="upload-area" id="uploadArea">
-                <div class="upload-icon">📁</div>
-                <div class="upload-text">Drop your video file here or click to browse</div>
-                <div class="upload-hint">Supports MP4, AVI, MOV files (max 16MB)</div>
-                <input type="file" id="fileInput" class="file-input" accept="video/*">
-            </div>
-            <button class="btn" onclick="document.getElementById('fileInput').click()">Choose File</button>
-            <button class="btn btn-secondary" onclick="toggleCamera()">📹 Record Video</button>
-        </div>
-
-        <div class="camera-section" id="cameraSection">
-            <video id="videoElement" autoplay muted></video>
-            <div class="camera-controls">
-                <button class="btn record-btn" id="recordBtn" onclick="toggleRecording()">🎥 Start Recording</button>
-                <button class="btn" onclick="stopCamera()">❌ Stop Camera</button>
+<body class="bg-gray-50">
+    <!-- Navigation -->
+    <nav class="bg-white shadow-lg sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16">
+                <div class="flex items-center">
+                    <img src="https://www.fs-umi.ac.ma/wp-content/uploads/2020/10/logo-2.png" alt="Faculté des Sciences Logo" class="h-10 w-20 mr-3" />
+                    <span class="text-xl font-bold text-primary">SignLang IA</span>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <a href="#home" class="text-gray-700 hover:text-primary px-3 py-2 rounded-md text-sm font-medium transition-colors">Accueil</a>
+                    <a href="#about" class="text-gray-700 hover:text-primary px-3 py-2 rounded-md text-sm font-medium transition-colors">À propos</a>
+                    <a href="#predict" class="bg-primary text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors">Essayer la Prédiction</a>
+                </div>
             </div>
         </div>
+    </nav>
 
-        <div class="video-preview" id="videoPreview" style="display: none;">
-            <video id="previewVideo" controls></video>
+    <!-- Hero Section -->
+    <section id="home" class="bg-gradient-to-br from-primary via-blue-600 to-blue-800 text-white py-20">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="text-center">
+                <h1 class="text-4xl md:text-6xl font-bold mb-6 animate-fade-in">
+                    Reconnaissance Avancée de Langue des Signes
+                </h1>
+                <p class="text-xl md:text-2xl mb-8 text-blue-100 animate-slide-up">
+                    Propulsé par l'IA et la Technologie de Vision par Ordinateur
+                </p>
+                <div class="flex flex-col sm:flex-row gap-4 justify-center animate-slide-up">
+                    <a href="#predict" class="bg-secondary text-white px-8 py-4 rounded-lg text-lg font-semibold hover:bg-orange-600 transition-all duration-300 transform hover:scale-105">
+                        🚀 Commencer la Prédiction
+                    </a>
+                    <a href="#about" class="border-2 border-white text-white px-8 py-4 rounded-lg text-lg font-semibold hover:bg-white hover:text-primary transition-all duration-300">
+                        📖 En Savoir Plus
+                    </a>
+                </div>
+            </div>
         </div>
+    </section>
 
-        <div class="loading" id="loading">
-            <div class="spinner"></div>
-            <p>Processing video and analyzing sign language...</p>
+    <!-- Prediction Section -->
+    <section id="predict" class="py-20 bg-white">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="text-center mb-16">
+                <h2 class="text-3xl md:text-4xl font-bold text-gray-900 mb-4">Essayer la Reconnaissance de Langue des Signes</h2>
+                <p class="text-xl text-gray-600">Téléchargez une vidéo ou enregistrez directement pour obtenir des prédictions instantanées</p>
+            </div>
+
+            <div class="grid lg:grid-cols-2 gap-12 items-center justify-center  ">
+                <!-- Input Section -->
+                <div class="space-y-8">
+                    <!-- File Upload -->
+                    <div class="bg-gray-50 rounded-2xl p-8">
+                        <h3 class="text-xl font-semibold text-gray-900 mb-6 flex items-center">
+                            <svg class="w-6 h-6 text-primary mr-3" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM6.293 6.707a1 1 0 010-1.414l3-3a1 1 0 011.414 0l3 3a1 1 0 01-1.414 1.414L11 5.414V13a1 1 0 11-2 0V5.414L7.707 6.707a1 1 0 01-1.414 0z" clip-rule="evenodd"></path>
+                            </svg>
+                            Télécharger une Vidéo
+                        </h3>
+                        
+                        <div class="border-2 border-dashed border-gray-300 rounded-xl p-8 text-center transition-all duration-300 cursor-pointer hover:border-primary hover:bg-blue-50" id="uploadArea">
+                            <div class="text-4xl text-primary mb-3">📁</div>
+                            <div class="text-lg font-medium text-gray-700 mb-2">Déposez votre fichier vidéo ici</div>
+                            <div class="text-sm text-gray-500 mb-4">ou cliquez pour parcourir les fichiers</div>
+                            <div class="text-xs text-gray-400">Supporte MP4, AVI, MOV (max 16MB)</div>
+                            <input type="file" id="fileInput" class="hidden" accept="video/*">
+                        </div>
+                        
+                        <div class="mt-4">
+                            <button class="w-full bg-primary text-white py-3 px-4 rounded-lg font-medium transition-all duration-300 hover:bg-blue-700 hover:shadow-lg" onclick="document.getElementById('fileInput').click()">
+                                Choisir un Fichier
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Camera Recording -->
+                    <div class="bg-gray-50 rounded-2xl p-8">
+                        <h3 class="text-xl font-semibold text-gray-900 mb-6 flex items-center">
+                            <svg class="w-6 h-6 text-primary mr-3" fill="currentColor" viewBox="0 0 20 20">
+                                <path d="M2 6a2 2 0 012-2h6l2 2h6a2 2 0 012 2v6a2 2 0 01-2 2H4a2 2 0 01-2-2V6zM14.553 7.106A1 1 0 0014 8v4a1 1 0 00.553.894l2 1A1 1 0 0018 13V7a1 1 0 00-1.447-.894l-2 1z"></path>
+                            </svg>
+                            Enregistrer une Vidéo
+                        </h3>
+                        
+                        <button class="w-full bg-secondary text-white py-3 px-4 rounded-lg font-medium transition-all duration-300 hover:bg-orange-600 hover:shadow-lg" onclick="toggleCamera()">
+                            📹 Commencer l'Enregistrement
+                        </button>
+
+                        <!-- Camera Preview -->
+                        <div class="hidden mt-6" id="cameraSection">
+                            <video id="videoElement" class="w-full rounded-lg shadow-md mb-4" autoplay muted></video>
+                            <div class="flex gap-3">
+                                <button class="flex-1 bg-red-500 text-white py-3 px-4 rounded-lg font-medium transition-all duration-300 hover:bg-red-600" id="recordBtn" onclick="toggleRecording()">
+                                    🎥 Commencer l'Enregistrement
+                                </button>
+                                <button class="flex-1 bg-gray-500 text-white py-3 px-4 rounded-lg font-medium transition-all duration-300 hover:bg-gray-600" onclick="stopCamera()">
+                                    ❌ Arrêter la Caméra
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Results Section -->
+                <div class="space-y-8">
+                    <!-- Video Preview -->
+                    <div class="hidden bg-gray-50 rounded-2xl p-8" id="videoPreview">
+                        <h3 class="text-xl font-semibold text-gray-900 mb-4">Aperçu de la Vidéo</h3>
+                        <video id="previewVideo" class="w-full rounded-lg shadow-md" controls></video>
+                    </div>
+
+                    <!-- Loading State -->
+                    <div class="hidden bg-gray-50 rounded-2xl p-8" id="loading">
+                        <div class="text-center">
+                            <div class="w-16 h-16 border-4 border-gray-300 border-t-primary rounded-full animate-spin mx-auto mb-4"></div>
+                            <h3 class="text-xl font-semibold text-gray-900 mb-2">Traitement de la Vidéo</h3>
+                            <p class="text-gray-600">Analyse des motifs de langue des signes...</p>
+                        </div>
+                    </div>
+
+                    <!-- Messages -->
+                    <div class="hidden bg-red-50 border border-red-200 text-red-700 p-4 rounded-lg" id="error"></div>
+                    <div class="hidden bg-green-50 border border-green-200 text-green-700 p-4 rounded-lg" id="success"></div>
+
+                    <!-- Results -->
+                    <div class="hidden bg-white border border-gray-200 rounded-2xl p-8 shadow-lg" id="resultSection">
+                        <div class="text-center mb-8">
+                            <div class="inline-flex items-center justify-center w-16 h-16 bg-green-100 rounded-full mb-4">
+                                <svg class="w-8 h-8 text-green-600" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
+                                </svg>
+                            </div>
+                            <h3 class="text-2xl font-semibold text-gray-900 mb-2">Reconnaissance Terminée</h3>
+                            <div class="text-4xl font-bold text-primary mb-2" id="prediction"></div>
+                            <div class="text-xl text-gray-600" id="confidence"></div>
+                        </div>
+                        
+                        <div class="space-y-4" id="probabilities"></div>
+                    </div>
+                </div>
+            </div>
         </div>
+    </section>
 
-        <div class="error" id="error"></div>
-        <div class="success" id="success"></div>
 
-        <div class="result-section" id="resultSection">
-            <div class="result-title">Recognition Result</div>
-            <div class="prediction" id="prediction"></div>
-            <div class="confidence" id="confidence"></div>
-            <div class="probabilities" id="probabilities"></div>
+    <section class="py-20 bg-white">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="text-center mb-16">
+                <h2 class="text-3xl md:text-4xl font-bold text-gray-900 mb-4">Pourquoi Choisir Notre Solution ?</h2>
+                <p class="text-xl text-gray-600">Technologie de pointe pour une reconnaissance précise de la langue des signes</p>
+            </div>
+            
+            <div class="grid md:grid-cols-3 gap-8">
+                <div class="text-center p-6 rounded-xl bg-gray-50 hover:bg-gray-100 transition-all duration-300">
+                    <div class="w-16 h-16 bg-primary rounded-full flex items-center justify-center mx-auto mb-4">
+                        <span class="text-2xl">🤖</span>
+                    </div>
+                    <h3 class="text-xl font-semibold text-gray-900 mb-2">Propulsé par l'IA</h3>
+                    <p class="text-gray-600">Réseaux de neurones LSTM avancés entraînés sur des ensembles de données étendus de langue des signes</p>
+                </div>
+                
+                <div class="text-center p-6 rounded-xl bg-gray-50 hover:bg-gray-100 transition-all duration-300">
+                    <div class="w-16 h-16 bg-secondary rounded-full flex items-center justify-center mx-auto mb-4">
+                        <span class="text-2xl">📹</span>
+                    </div>
+                    <h3 class="text-xl font-semibold text-gray-900 mb-2">Traitement en Temps Réel</h3>
+                    <p class="text-gray-600">Téléchargez des vidéos ou enregistrez directement via votre caméra pour des résultats instantanés</p>
+                </div>
+                
+                <div class="text-center p-6 rounded-xl bg-gray-50 hover:bg-gray-100 transition-all duration-300">
+                    <div class="w-16 h-16 bg-accent rounded-full flex items-center justify-center mx-auto mb-4">
+                        <span class="text-2xl">🎯</span>
+                    </div>
+                    <h3 class="text-xl font-semibold text-gray-900 mb-2">Haute Précision</h3>
+                    <p class="text-gray-600">Atteint plus de 92% de précision dans la classification de la langue des signes</p>
+                </div>
+            </div>
         </div>
-    </div>
+    </section>
+
+
+    <section id="about" class="py-20 bg-gray-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="grid md:grid-cols-2 gap-12 items-center">
+                <div>
+                    <h2 class="text-3xl md:text-4xl font-bold text-gray-900 mb-6">À Propos de Notre Technologie</h2>
+                    <p class="text-lg text-gray-600 mb-6">
+                        Notre système de reconnaissance de langue des signes combine des techniques de vision par ordinateur de pointe avec l'apprentissage profond pour identifier et classer avec précision les gestes de langue des signes.
+                    </p>
+                    <div class="space-y-4">
+                        <div class="flex items-start">
+                            <div class="w-6 h-6 bg-primary rounded-full flex items-center justify-center mr-3 mt-1">
+                                <span class="text-white text-xs">✓</span>
+                            </div>
+                            <div>
+                                <h4 class="font-semibold text-gray-900">Détection d'Objets YOLO</h4>
+                                <p class="text-gray-600">Détection avancée des mains utilisant YOLOv8</p>
+                            </div>
+                        </div>
+                        <div class="flex items-start">
+                            <div class="w-6 h-6 bg-primary rounded-full flex items-center justify-center mr-3 mt-1">
+                                <span class="text-white text-xs">✓</span>
+                            </div>
+                            <div>
+                                <h4 class="font-semibold text-gray-900">Suivi des Mains MediaPipe</h4>
+                                <p class="text-gray-600">Extraction précise des points de repère des mains</p>
+                            </div>
+                        </div>
+                        <div class="flex items-start">
+                            <div class="w-6 h-6 bg-primary rounded-full flex items-center justify-center mr-3 mt-1">
+                                <span class="text-white text-xs">✓</span>
+                            </div>
+                            <div>
+                                <h4 class="font-semibold text-gray-900">Réseaux de Neurones LSTM</h4>
+                                <p class="text-gray-600">Reconnaissance de motifs temporels pour la classification des gestes</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="bg-white p-8 rounded-2xl shadow-lg">
+                    <h3 class="text-2xl font-bold text-gray-900 mb-4">Signes Supportés</h3>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div class="bg-gray-50 p-4 rounded-lg text-center">
+                            <span class="text-2xl">⌨️</span>
+                            <p class="font-semibold text-gray-900">Clavier</p>
+                        </div>
+                        <div class="bg-gray-50 p-4 rounded-lg text-center">
+                            <span class="text-2xl">💾</span>
+                            <p class="font-semibold text-gray-900">Disque Dur</p>
+                        </div>
+                        <div class="bg-gray-50 p-4 rounded-lg text-center">
+                            <span class="text-2xl">🖥️</span>
+                            <p class="font-semibold text-gray-900">Ordinateur</p>
+                        </div>
+                        <div class="bg-gray-50 p-4 rounded-lg text-center">
+                            <span class="text-2xl">🖱️</span>
+                            <p class="font-semibold text-gray-900">Souris</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    
 
     <script>
         let mediaRecorder;
@@ -341,19 +297,33 @@
         const success = document.getElementById('success');
         const resultSection = document.getElementById('resultSection');
 
+        // Smooth scrolling for navigation links
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                const target = document.querySelector(this.getAttribute('href'));
+                if (target) {
+                    target.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'start'
+                    });
+                }
+            });
+        });
+
         // Drag and drop functionality
         uploadArea.addEventListener('dragover', (e) => {
             e.preventDefault();
-            uploadArea.classList.add('dragover');
+            uploadArea.classList.add('border-primary', 'bg-blue-50');
         });
 
         uploadArea.addEventListener('dragleave', () => {
-            uploadArea.classList.remove('dragover');
+            uploadArea.classList.remove('border-primary', 'bg-blue-50');
         });
 
         uploadArea.addEventListener('drop', (e) => {
             e.preventDefault();
-            uploadArea.classList.remove('dragover');
+            uploadArea.classList.remove('border-primary', 'bg-blue-50');
             const files = e.dataTransfer.files;
             if (files.length > 0) {
                 handleFile(files[0]);
@@ -372,20 +342,20 @@
 
         function handleFile(file) {
             if (!file.type.startsWith('video/')) {
-                showError('Please select a valid video file.');
+                showError('Veuillez sélectionner un fichier vidéo valide.');
                 return;
             }
 
             if (file.size > 16 * 1024 * 1024) {
-                showError('File size must be less than 16MB.');
+                showError('La taille du fichier doit être inférieure à 16MB.');
                 return;
             }
 
             // Show video preview
             const url = URL.createObjectURL(file);
             previewVideo.src = url;
-            videoPreview.style.display = 'block';
-            resultSection.style.display = 'none';
+            videoPreview.classList.remove('hidden');
+            resultSection.classList.add('hidden');
             hideMessages();
 
             // Upload and process
@@ -396,7 +366,7 @@
             const formData = new FormData();
             formData.append('video', file);
 
-            loading.style.display = 'block';
+            loading.classList.remove('hidden');
             hideMessages();
 
             fetch('/upload', {
@@ -405,7 +375,7 @@
             })
             .then(response => response.json())
             .then(data => {
-                loading.style.display = 'none';
+                loading.classList.add('hidden');
                 if (data.error) {
                     showError(data.error);
                 } else {
@@ -413,8 +383,8 @@
                 }
             })
             .catch(err => {
-                loading.style.display = 'none';
-                showError('An error occurred while processing the video.');
+                loading.classList.add('hidden');
+                showError('Une erreur s\'est produite lors du traitement de la vidéo.');
                 console.error(err);
             });
         }
@@ -422,7 +392,7 @@
         // Camera functionality
         function toggleCamera() {
             const cameraSection = document.getElementById('cameraSection');
-            if (cameraSection.style.display === 'none' || cameraSection.style.display === '') {
+            if (cameraSection.classList.contains('hidden')) {
                 startCamera();
             } else {
                 stopCamera();
@@ -442,10 +412,10 @@
                 const videoElement = document.getElementById('videoElement');
                 videoElement.srcObject = stream;
                 
-                document.getElementById('cameraSection').style.display = 'block';
+                document.getElementById('cameraSection').classList.remove('hidden');
                 hideMessages();
             } catch (err) {
-                showError('Could not access camera: ' + err.message);
+                showError('Impossible d\'accéder à la caméra : ' + err.message);
             }
         }
 
@@ -459,7 +429,7 @@
                 stopRecording();
             }
             
-            document.getElementById('cameraSection').style.display = 'none';
+            document.getElementById('cameraSection').classList.add('hidden');
         }
 
         function toggleRecording() {
@@ -492,8 +462,8 @@
             isRecording = true;
             
             const recordBtn = document.getElementById('recordBtn');
-            recordBtn.textContent = '⏹️ Stop Recording';
-            recordBtn.classList.add('recording');
+            recordBtn.textContent = '⏹️ Arrêter l\'Enregistrement';
+            recordBtn.classList.add('animate-pulse', 'bg-red-600');
         }
 
         function stopRecording() {
@@ -502,8 +472,9 @@
                 isRecording = false;
                 
                 const recordBtn = document.getElementById('recordBtn');
-                recordBtn.textContent = '🎥 Start Recording';
-                recordBtn.classList.remove('recording');
+                recordBtn.textContent = '🎥 Commencer l\'Enregistrement';
+                recordBtn.classList.remove('animate-pulse', 'bg-red-600');
+                recordBtn.classList.add('bg-red-500');
             }
         }
 
@@ -513,7 +484,7 @@
             const probabilities = document.getElementById('probabilities');
 
             prediction.textContent = data.predicted_class;
-            confidence.textContent = `Confidence: ${(data.confidence * 100).toFixed(1)}%`;
+            confidence.textContent = `Confiance : ${(data.confidence * 100).toFixed(1)}%`;
 
             // Clear previous probabilities
             probabilities.innerHTML = '';
@@ -521,44 +492,54 @@
             // Add probability bars
             Object.entries(data.all_probabilities).forEach(([className, prob]) => {
                 const item = document.createElement('div');
-                item.className = 'probability-item';
+                item.className = 'bg-gray-50 p-4 rounded-lg';
+                
+                const header = document.createElement('div');
+                header.className = 'flex justify-between items-center mb-2';
                 
                 const label = document.createElement('div');
-                label.className = 'probability-label';
+                label.className = 'font-medium text-gray-900';
                 label.textContent = className;
                 
+                const percentage = document.createElement('div');
+                percentage.className = 'text-sm font-medium text-primary';
+                percentage.textContent = `${(prob * 100).toFixed(1)}%`;
+                
+                header.appendChild(label);
+                header.appendChild(percentage);
+                
                 const bar = document.createElement('div');
-                bar.className = 'probability-bar';
+                bar.className = 'bg-gray-200 h-3 rounded-full overflow-hidden';
                 
                 const fill = document.createElement('div');
-                fill.className = 'probability-fill';
+                fill.className = 'h-full bg-gradient-to-r from-primary to-secondary transition-all duration-300';
                 fill.style.width = `${prob * 100}%`;
                 
                 bar.appendChild(fill);
-                item.appendChild(label);
+                item.appendChild(header);
                 item.appendChild(bar);
                 probabilities.appendChild(item);
             });
 
-            resultSection.style.display = 'block';
-            showSuccess('Video processed successfully!');
+            resultSection.classList.remove('hidden');
+            showSuccess('Vidéo traitée avec succès !');
         }
 
         function showError(message) {
             error.textContent = message;
-            error.style.display = 'block';
-            success.style.display = 'none';
+            error.classList.remove('hidden');
+            success.classList.add('hidden');
         }
 
         function showSuccess(message) {
             success.textContent = message;
-            success.style.display = 'block';
-            error.style.display = 'none';
+            success.classList.remove('hidden');
+            error.classList.add('hidden');
         }
 
         function hideMessages() {
-            error.style.display = 'none';
-            success.style.display = 'none';
+            error.classList.add('hidden');
+            success.classList.add('hidden');
         }
 
         // Clean up on page unload

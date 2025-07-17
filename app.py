@@ -145,6 +145,8 @@ def load_model_and_data():
     """Load the trained model and data module"""
     global trained_model, data_module, yolo_detector, mp_hands, mp_drawing
     
+    print("🔄 Starting model and data loading...")
+    
     # Check if MediaPipe is available
     if not MEDIAPIPE_AVAILABLE:
         print("❌ MediaPipe is not available. Please install it: pip install mediapipe")
@@ -173,35 +175,66 @@ def load_model_and_data():
         return False
     
     # Load the best model
+    print("🔍 Looking for model files...")
     model_path = Path("./model_yolo/best-action-model-epoch=31-val_f1=0.92.ckpt")
     if not model_path.exists():
+        print(f"⚠️  Model not found at {model_path}")
         # Try alternative model
         model_path = Path("./model_yolo/best-action-model-epoch=13-val_f1=0.88-v3.ckpt")
+        if not model_path.exists():
+            print(f"⚠️  Alternative model not found at {model_path}")
+            # Try other alternatives
+            alternative_models = [
+                "model_yolo/best-action-model-epoch=13-val_f1=0.88-v2.ckpt",
+                "model_yolo/best-action-model-epoch=13-val_f1=0.88-v1.ckpt",
+                "model_yolo/best-action-model-epoch=13-val_f1=0.88.ckpt"
+            ]
+            for alt_model in alternative_models:
+                alt_path = Path(alt_model)
+                if alt_path.exists():
+                    model_path = alt_path
+                    print(f"✅ Found alternative model: {model_path}")
+                    break
+            else:
+                print("❌ No trained model found!")
+                return False
+        else:
+            print(f"✅ Found alternative model: {model_path}")
+    else:
+        print(f"✅ Found primary model: {model_path}")
     
     if model_path.exists():
         try:
+            print(f"🔄 Loading model from {model_path}...")
             trained_model = LSTMClassifier.load_from_checkpoint(str(model_path))
             trained_model.eval()
-            print(f"✅ Model loaded from {model_path}")
+            print(f"✅ Model loaded successfully from {model_path}")
         except Exception as e:
             print(f"❌ Failed to load model: {e}")
+            import traceback
+            traceback.print_exc()
             return False
     else:
         print("❌ No trained model found!")
         return False
     
     # Load data module to get class names
+    print("🔍 Looking for data file...")
     hdf5_file_path = Path("./data-yolo/model.h5")
     if hdf5_file_path.exists():
         try:
+            print(f"🔄 Loading data from {hdf5_file_path}...")
             with h5py.File(hdf5_file_path, 'r') as hf:
                 data_module = type('DataModule', (), {})()
                 data_module.label_map = json.loads(hf.attrs['label_map'])
                 data_module.num_classes = len(data_module.label_map)
                 data_module.inv_label_map = {v: k for k, v in data_module.label_map.items()}
-            print("✅ Data module loaded successfully")
+            print(f"✅ Data module loaded successfully with {data_module.num_classes} classes")
+            print(f"📋 Classes: {list(data_module.label_map.keys())}")
         except Exception as e:
             print(f"❌ Failed to load data module: {e}")
+            import traceback
+            traceback.print_exc()
             return False
     else:
         print("❌ HDF5 file not found!")
@@ -353,6 +386,12 @@ def process_video_for_inference(video_path):
 
 def predict_sign(video_path):
     """Predict the sign from a video file - matching notebook code"""
+    print(f"🔍 Checking model status...")
+    print(f"   - trained_model: {trained_model is not None}")
+    print(f"   - data_module: {data_module is not None}")
+    print(f"   - yolo_detector: {yolo_detector is not None}")
+    print(f"   - mp_hands: {mp_hands is not None}")
+    
     if trained_model is None:
         return None, "Model not loaded"
     
